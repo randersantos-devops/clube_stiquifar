@@ -1,5 +1,7 @@
 from django.db import models
 from escpos.printer import Usb
+from django.core.exceptions import ValidationError
+
 
 class InviteTicket(models.Model):
 
@@ -8,17 +10,16 @@ class InviteTicket(models.Model):
         ('SINDICALIZADO(A)', 'SINDICALIZADO(A)'),
     ]
 
-    STATUS_INVITE = [
-        ('CANCELADO', 'CANCELADO'),
-        ('RETIRADO', 'RETIRADO'),
-        ('SOLICITADO', 'SOLICITADO')
-    ]
+    # STATUS_INVITE = [
+    #     ('CANCELADO', 'CANCELADO'),
+    #     ('RETIRADO', 'RETIRADO'),
+    #     ('SOLICITADO', 'SOLICITADO')
+    # ]
 
     id = models.AutoField(primary_key=True)
-    dt_emissao = models.DateTimeField(auto_now_add=True)
+    dt_emissao = models.DateTimeField(auto_now_add=False)
     name_associate = models.CharField(max_length=255, verbose_name='Nome do Associado')
     type_associate = models.CharField(max_length=30, choices=TYPE_ASSOCIATES, verbose_name='Tipo de Sócio')
-    invite_status = models.CharField(max_length=30, choices=STATUS_INVITE, verbose_name='Status do Convite')
 
     class Meta:
         ordering = ['dt_emissao']
@@ -65,9 +66,30 @@ class InviteTicket(models.Model):
         p.cut()
 
 class Invite(models.Model):
+    STATUS_INVITE = [
+        ('CANCELADO', 'CANCELADO'),
+        ('RETIRADO', 'RETIRADO'),
+        ('SOLICITADO', 'SOLICITADO')
+    ]
+
     invite_ticket = models.ForeignKey(InviteTicket, on_delete=models.CASCADE, verbose_name='ID Ticket')
     name_guest = models.CharField(max_length=255, verbose_name='Nome do Convidado')
     doc_guest = models.CharField(max_length=15, verbose_name='Documento do Convidado')
+    invite_status = models.CharField(max_length=30, choices=STATUS_INVITE, verbose_name='Status do Convite')
+
+    def clean(self):
+        # Contando quantos convites já foram registrados para este associado
+        num_invites = Invite.objects.filter(invite_ticket__name_associate=self.invite_ticket.name_associate).count()
+        
+        if num_invites >= 3:
+            raise ValidationError(f'O associado {self.invite_ticket.name_associate} já cadastrou 3 convites e não pode cadastrar mais.')
+
+    class Meta:
+        ordering = ['name_guest']
+        verbose_name = 'Convidado'
+
+    def __str__(self):
+        return f'Convidado: {self.name_guest} portador do documento: {self.doc_guest}'
 
     class Meta:
         ordering = ['name_guest']

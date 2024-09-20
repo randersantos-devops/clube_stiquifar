@@ -9,7 +9,7 @@ class InviteInline(admin.TabularInline):
     extra = 1
 
 class InviteTicketAdmin(admin.ModelAdmin):
-    list_display = ('id', 'dt_emissao', 'name_associate', 'invite_status', 'generate_voucher_button')
+    list_display = ('id', 'dt_emissao', 'name_associate', 'generate_voucher_button')
     search_fields = ('name_associate', 'invite_status',)
     inlines = [InviteInline]
 
